@@ -1,0 +1,28 @@
+const Colors = {
+  primary: "#0B1F3A",
+  secondary: "#1C1C1E",
+  accent: "#D4AF37",
+  accentLight: "#E8CC6A",
+  highlight: "#1ABC9C",
+  background: "#070D18",
+  backgroundSecondary: "#0F1E33",
+  backgroundTertiary: "#152844",
+  card: "#0F1E33",
+  cardBorder: "#1E3454",
+  text: "#FFFFFF",
+  textSecondary: "#A0A0A0",
+  textMuted: "#5A6A7E",
+  error: "#E74C3C",
+  success: "#1ABC9C",
+  warning: "#F39C12",
+  tabBar: "#0B1620",
+  tabBarBorder: "#1E2D42",
+  tabActive: "#D4AF37",
+  tabInactive: "#4A5568",
+  green: "#1ABC9C",
+  red: "#E74C3C",
+  blue: "#3B82F6",
+  purple: "#8B5CF6",
+};
+
+export default Colors;

@@ -1,0 +1,276 @@
+You are a senior full-stack engineer, product designer, and fintech architect.
+
+Your task is to build a production-ready SaaS web application called:
+
+XenFi — A Private Wealth Management Operating System for High-Net-Worth Individuals (HNWIs)
+
+This is NOT a basic budgeting app. It is a premium, privacy-first financial dashboard for users managing complex, multi-asset portfolios.
+
+--------------------------------------------------
+
+🎯 CORE OBJECTIVE:
+
+Build a modern, scalable, secure SaaS application with:
+
+- Clean UI/UX (premium feel like a private banking dashboard)
+- Modular architecture
+- Secure authentication
+- Real-time financial tracking
+- Freemium monetization system
+
+--------------------------------------------------
+
+🎨 DESIGN SYSTEM (VERY IMPORTANT):
+
+Create a luxury fintech UI with a "wealth, trust, and exclusivity" aesthetic.
+
+Color Palette:
+
+- Primary: Deep Navy Blue (#0B1F3A)
+- Secondary: Rich Charcoal (#1C1C1E)
+- Accent: Gold (#D4AF37)
+- Highlight: Emerald Green (#1ABC9C)
+- Background: Soft Dark Gradient (navy → black)
+- Text Primary: White (#FFFFFF)
+- Text Secondary: Light Gray (#A0A0A0)
+
+Design Style:
+
+- Minimalist, high-end (inspired by private banking apps)
+- Glassmorphism / subtle shadows
+- Smooth animations
+- Clean typography (Inter / SF Pro style)
+- Rounded corners (12px–16px)
+- Premium dashboard feel like Bloomberg-lite
+
+--------------------------------------------------
+
+🧩 CORE FEATURES:
+
+1. AUTHENTICATION SYSTEM
+- Email/password login
+- JWT-based authentication
+- Optional 2FA structure
+- Secure session handling
+
+--------------------------------------------------
+
+2. DASHBOARD (MAIN SCREEN)
+- Display:
+  - Net Worth (calculated)
+  - Monthly growth %
+  - Asset allocation (pie chart)
+  - Income vs Expenses summary
+  - Recent activity feed
+
+--------------------------------------------------
+
+3. PORTFOLIO MANAGEMENT
+- Asset categories:
+  - Stocks
+  - Crypto
+  - Real Estate
+  - Cash
+
+- Features:
+  - Add/Edit/Delete assets
+  - Track current value
+  - Track gain/loss
+  - Asset allocation %
+
+--------------------------------------------------
+
+4. EXPENSE TRACKER
+- Add daily expenses
+- Predefined categories:
+  (Travel, Dining, Shopping, Bills, Investment)
+- Monthly analytics (chart)
+
+--------------------------------------------------
+
+5. LOAN TRACKER
+- Track loans:
+  - Given
+  - Received
+- Fields:
+  - Name
+  - Amount
+  - Due date
+  - Status (Pending/Paid)
+
+--------------------------------------------------
+
+6. TAX MODULE (PREMIUM LOCKED)
+- Estimated capital gains
+- Tax calculation logic (basic placeholder)
+- Optimization suggestions
+
+--------------------------------------------------
+
+7. SUBSCRIPTION SYSTEM
+- Plans:
+  - Free
+  - Pro (monthly/yearly)
+  - Lifetime
+
+- Lock premium features
+- Show upgrade prompts
+
+--------------------------------------------------
+
+🗄️ DATABASE SCHEMA:
+
+Use PostgreSQL or Firebase.
+
+Tables:
+
+Users:
+- id
+- name
+- email
+- password_hash
+- is_premium
+- created_at
+
+Assets:
+- id
+- user_id
+- type
+- name
+- value
+- purchase_value
+- created_at
+
+Expenses:
+- id
+- user_id
+- amount
+- category
+- date
+
+Loans:
+- id
+- user_id
+- name
+- type (given/received)
+- amount
+- due_date
+- status
+
+Subscriptions:
+- id
+- user_id
+- plan
+- status
+- start_date
+
+--------------------------------------------------
+
+⚙️ TECH STACK:
+
+Frontend:
+- React (Next.js preferred)
+- Tailwind CSS
+
+Backend:
+- Node.js / Express OR Firebase
+
+Charts:
+- Recharts or Chart.js
+
+Auth:
+- JWT / Firebase Auth
+
+--------------------------------------------------
+
+📱 UI STRUCTURE:
+
+Sidebar Navigation:
+
+- Dashboard
+- Portfolio
+- Expenses
+- Loans
+- Tax (locked)
+- Settings
+
+Top Navbar:
+- User profile
+- Upgrade button
+
+--------------------------------------------------
+
+🧠 BUSINESS LOGIC:
+
+- Net Worth = Sum of all asset values
+- Monthly change = compare snapshots
+- Lock premium features for free users
+- Limit free users:
+  - Max 3 assets
+  - No tax module
+
+--------------------------------------------------
+
+💰 MONETIZATION UX:
+
+- Show blurred premium features
+- Add "Upgrade to Pro" CTA
+- Offer:
+  - $19/month
+  - $99/year
+  - $249 lifetime
+
+--------------------------------------------------
+
+🔐 SECURITY:
+
+- Hash passwords (bcrypt)
+- Use HTTPS
+- Validate inputs
+- Protect routes (auth middleware)
+
+--------------------------------------------------
+
+📦 OUTPUT REQUIREMENTS:
+
+Generate:
+
+1. Full React frontend (pages + components)
+2. Backend API (routes, controllers)
+3. Database models
+4. Authentication system
+5. Sample UI components (dashboard, cards, charts)
+6. Clean folder structure
+7. Comments in code for clarity
+
+--------------------------------------------------
+
+🎯 UX TONE:
+
+Everything must feel:
+
+- Premium
+- Private
+- Powerful
+- Clean
+- Designed for wealthy professionals
+
+Avoid:
+- Bright playful colors
+- Clutter
+- Beginner-level UI
+
+--------------------------------------------------
+
+🚀 BONUS (IF POSSIBLE):
+
+- Add dummy financial data
+- Include loading states
+- Add smooth transitions
+- Add dark mode by default
+
+--------------------------------------------------
+
+FINAL GOAL:
+
+A deployable MVP SaaS app called XenFi that looks like a high-end fintech product and can be immediately used or extended.

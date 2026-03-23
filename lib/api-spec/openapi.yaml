@@ -1,22 +1,28 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: XenFi Wealth Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: assets
+    description: Portfolio assets
+  - name: expenses
+    description: Expense tracking
+  - name: loans
+    description: Loan tracking
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +30,300 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /assets:
+    get:
+      operationId: getAssets
+      tags: [assets]
+      summary: Get all assets for the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Asset"
+    post:
+      operationId: createAsset
+      tags: [assets]
+      summary: Create a new asset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetRequest"
+      responses:
+        "201":
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "403":
+          description: Asset limit reached for free plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /assets/{id}:
+    put:
+      operationId: updateAsset
+      tags: [assets]
+      summary: Update an asset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAssetRequest"
+      responses:
+        "200":
+          description: Asset updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+    delete:
+      operationId: deleteAsset
+      tags: [assets]
+      summary: Delete an asset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Asset deleted
+
+  /expenses:
+    get:
+      operationId: getExpenses
+      tags: [expenses]
+      summary: Get all expenses for the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Create a new expense
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseRequest"
+      responses:
+        "201":
+          description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /expenses/{id}:
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Expense deleted
+
+  /loans:
+    get:
+      operationId: getLoans
+      tags: [loans]
+      summary: Get all loans for the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of loans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Loan"
+    post:
+      operationId: createLoan
+      tags: [loans]
+      summary: Create a new loan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLoanRequest"
+      responses:
+        "201":
+          description: Loan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+
+  /loans/{id}:
+    put:
+      operationId: updateLoan
+      tags: [loans]
+      summary: Update a loan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLoanRequest"
+      responses:
+        "200":
+          description: Loan updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loan"
+    delete:
+      operationId: deleteLoan
+      tags: [loans]
+      summary: Delete a loan
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Loan deleted
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +333,265 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required:
+        - name
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        isPremium:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - isPremium
+        - createdAt
+
+    AssetType:
+      type: string
+      enum:
+        - stocks
+        - crypto
+        - real_estate
+        - cash
+
+    Asset:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          $ref: "#/components/schemas/AssetType"
+        name:
+          type: string
+        value:
+          type: number
+        purchaseValue:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - type
+        - name
+        - value
+        - purchaseValue
+        - createdAt
+
+    CreateAssetRequest:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/AssetType"
+        name:
+          type: string
+        value:
+          type: number
+        purchaseValue:
+          type: number
+      required:
+        - type
+        - name
+        - value
+        - purchaseValue
+
+    UpdateAssetRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: number
+        purchaseValue:
+          type: number
+
+    ExpenseCategory:
+      type: string
+      enum:
+        - travel
+        - dining
+        - shopping
+        - bills
+        - investment
+        - other
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        amount:
+          type: number
+        category:
+          $ref: "#/components/schemas/ExpenseCategory"
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - amount
+        - category
+        - description
+        - date
+        - createdAt
+
+    CreateExpenseRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+        category:
+          $ref: "#/components/schemas/ExpenseCategory"
+        description:
+          type: string
+        date:
+          type: string
+          format: date-time
+      required:
+        - amount
+        - category
+        - description
+        - date
+
+    LoanType:
+      type: string
+      enum:
+        - given
+        - received
+
+    LoanStatus:
+      type: string
+      enum:
+        - pending
+        - paid
+
+    Loan:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/LoanType"
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/LoanStatus"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - type
+        - amount
+        - dueDate
+        - status
+        - createdAt
+
+    CreateLoanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/LoanType"
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/LoanStatus"
+      required:
+        - name
+        - type
+        - amount
+        - dueDate
+        - status
+
+    UpdateLoanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/LoanStatus"
