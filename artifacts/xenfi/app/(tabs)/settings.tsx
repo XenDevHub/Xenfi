@@ -1,12 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  Platform,
-  Alert,
+  View, Text, ScrollView, StyleSheet, Pressable, Platform, Alert, Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -15,20 +9,21 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
+import { useApi } from '@/hooks/useApi';
 
 const PLANS = [
   {
     name: 'Pro Monthly',
     price: '$19',
     period: '/month',
-    features: ['Unlimited assets', 'Tax module', 'Priority support'],
+    features: ['Unlimited assets', 'Xeni AI advisor', 'Tax module', 'Priority support'],
     highlighted: false,
   },
   {
     name: 'Pro Annual',
     price: '$99',
     period: '/year',
-    features: ['Unlimited assets', 'Tax module', 'Save 57%', 'Priority support'],
+    features: ['Unlimited assets', 'Xeni AI advisor', 'Tax module', 'Save 57%', 'Priority support'],
     highlighted: true,
     badge: 'BEST VALUE',
   },
@@ -36,7 +31,7 @@ const PLANS = [
     name: 'Lifetime',
     price: '$249',
     period: 'one-time',
-    features: ['Everything in Pro', 'All future features', 'Forever access'],
+    features: ['Everything in Pro', 'Business mode', 'All future features', 'Forever access'],
     highlighted: false,
   },
 ];
@@ -47,22 +42,25 @@ interface RowProps {
   value?: string;
   onPress?: () => void;
   danger?: boolean;
+  rightNode?: React.ReactNode;
+  iconColor?: string;
 }
 
-function SettingRow({ icon, label, value, onPress, danger }: RowProps) {
+function SettingRow({ icon, label, value, onPress, danger, rightNode, iconColor }: RowProps) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={({ pressed }) => [styles.row, pressed && onPress && styles.rowPressed]}
       onPress={onPress}
-      disabled={!onPress}
+      disabled={!onPress && !rightNode}
     >
-      <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
-        <Feather name={icon as any} size={16} color={danger ? Colors.error : Colors.accent} />
+      <View style={[styles.rowIcon, danger && styles.rowIconDanger, iconColor ? { backgroundColor: iconColor + '22' } : undefined]}>
+        <Feather name={icon as any} size={16} color={danger ? Colors.error : (iconColor || Colors.accent)} />
       </View>
       <Text style={[styles.rowLabel, danger && { color: Colors.error }]}>{label}</Text>
       <View style={styles.rowRight}>
         {value && <Text style={styles.rowValue}>{value}</Text>}
-        {onPress && <Feather name="chevron-right" size={16} color={Colors.textMuted} />}
+        {rightNode}
+        {onPress && !rightNode && <Feather name="chevron-right" size={16} color={Colors.textMuted} />}
       </View>
     </Pressable>
   );
@@ -70,10 +68,15 @@ function SettingRow({ icon, label, value, onPress, danger }: RowProps) {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
+  const { apiFetch } = useApi();
+  const [businessModeLoading, setBusinessModeLoading] = useState(false);
 
   const webTopPad = Platform.OS === 'web' ? 67 : insets.top;
   const webBottomPad = Platform.OS === 'web' ? 34 : 0;
+
+  const isAdmin = user?.role === 'admin';
+  const isPremium = user?.isPremium || user?.role === 'premium_user' || isAdmin;
 
   async function handleLogout() {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -91,12 +94,21 @@ export default function SettingsScreen() {
   }
 
   function handleUpgrade(plan: string) {
-    Alert.alert(
-      `Upgrade to ${plan}`,
-      'In-app purchases are coming soon. Thank you for your interest!',
-      [{ text: 'OK' }]
-    );
+    Alert.alert(`Upgrade to ${plan}`, 'In-app purchases are coming soon. Thank you for your interest!', [{ text: 'OK' }]);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }
+
+  async function toggleBusinessMode(value: boolean) {
+    setBusinessModeLoading(true);
+    try {
+      await apiFetch('/business/mode', { method: 'PATCH', body: JSON.stringify({ businessMode: value }) });
+      updateUser({ businessMode: value });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      Alert.alert('Error', 'Could not update business mode');
+    } finally {
+      setBusinessModeLoading(false);
+    }
   }
 
   return (
@@ -105,19 +117,22 @@ export default function SettingsScreen() {
         contentContainerStyle={[styles.container, { paddingTop: webTopPad + 16, paddingBottom: webBottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <Text style={styles.title}>Settings</Text>
 
         {/* Profile card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, isAdmin && { backgroundColor: Colors.purple }]}>
             <Text style={styles.avatarText}>{user?.name?.charAt(0)?.toUpperCase() ?? 'U'}</Text>
           </View>
           <View style={styles.profileMeta}>
             <Text style={styles.profileName}>{user?.name}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
           </View>
-          {user?.isPremium ? (
+          {isAdmin ? (
+            <View style={[styles.roleBadge, { backgroundColor: Colors.purple + '33', borderColor: Colors.purple }]}>
+              <Text style={[styles.roleBadgeText, { color: Colors.purple }]}>ADMIN</Text>
+            </View>
+          ) : isPremium ? (
             <View style={styles.proBadge}>
               <Text style={styles.proText}>PRO</Text>
             </View>
@@ -128,14 +143,65 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Admin panel */}
+        {isAdmin && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Feather name="shield" size={16} color={Colors.purple} />
+              <Text style={[styles.sectionTitle, { color: Colors.purple }]}>Admin Panel</Text>
+            </View>
+            <View style={[styles.settingsGroup, { borderColor: Colors.purple + '44' }]}>
+              <SettingRow icon="users" label="All Features Unlocked" value="Full Access" iconColor={Colors.purple} />
+              <View style={styles.separator} />
+              <SettingRow icon="database" label="Database Access" value="Enabled" iconColor={Colors.purple} />
+              <View style={styles.separator} />
+              <SettingRow icon="unlock" label="No Restrictions" value="Admin Override" iconColor={Colors.purple} />
+            </View>
+          </View>
+        )}
+
+        {/* Mode toggle */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Feather name="toggle-left" size={16} color={Colors.accent} />
+            <Text style={styles.sectionTitle}>App Mode</Text>
+          </View>
+          <View style={styles.modeToggleCard}>
+            <View style={styles.modeOption}>
+              <View style={styles.modeIcon}>
+                <Feather name="user" size={20} color={!user?.businessMode ? Colors.accent : Colors.textMuted} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modeLabel, !user?.businessMode && { color: Colors.accent }]}>Personal Mode</Text>
+                <Text style={styles.modeSubtitle}>Manage personal wealth & investments</Text>
+              </View>
+            </View>
+            <Switch
+              value={user?.businessMode ?? false}
+              onValueChange={toggleBusinessMode}
+              disabled={businessModeLoading}
+              trackColor={{ false: Colors.cardBorder, true: Colors.highlight + '88' }}
+              thumbColor={user?.businessMode ? Colors.highlight : Colors.textMuted}
+            />
+            <View style={styles.modeOption}>
+              <View style={styles.modeIcon}>
+                <Feather name="briefcase" size={20} color={user?.businessMode ? Colors.highlight : Colors.textMuted} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modeLabel, user?.businessMode && { color: Colors.highlight }]}>Business Mode</Text>
+                <Text style={styles.modeSubtitle}>Track revenue, expenses & P&L</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Premium plans */}
-        {!user?.isPremium && (
+        {!isPremium && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Feather name="zap" size={16} color={Colors.accent} />
               <Text style={styles.sectionTitle}>Upgrade to Pro</Text>
             </View>
-
             {PLANS.map((plan) => (
               <Pressable
                 key={plan.name}
@@ -148,10 +214,10 @@ export default function SettingsScreen() {
                   </View>
                 )}
                 <View style={styles.planTop}>
-                  <Text style={styles.planName}>{plan.name}</Text>
+                  <Text style={[styles.planName, plan.highlighted && { color: Colors.primary }]}>{plan.name}</Text>
                   <View style={styles.planPriceRow}>
-                    <Text style={styles.planPrice}>{plan.price}</Text>
-                    <Text style={styles.planPeriod}>{plan.period}</Text>
+                    <Text style={[styles.planPrice, plan.highlighted && { color: Colors.primary }]}>{plan.price}</Text>
+                    <Text style={[styles.planPeriod, plan.highlighted && { color: Colors.primary + 'CC' }]}>{plan.period}</Text>
                   </View>
                 </View>
                 <View style={styles.planFeatures}>
@@ -167,35 +233,55 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {/* Tax module (premium locked) */}
+        {/* Tax module */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tax Module</Text>
           <View style={styles.taxLockCard}>
             <View style={styles.taxLockHeader}>
-              <Feather name="lock" size={20} color={Colors.accent} />
-              <Text style={styles.taxLockTitle}>Premium Feature</Text>
+              <Feather name={isPremium ? 'check-circle' : 'lock'} size={20} color={Colors.accent} />
+              <Text style={styles.taxLockTitle}>{isPremium ? 'Tax Intelligence' : 'Premium Feature'}</Text>
             </View>
             <Text style={styles.taxLockDesc}>
-              Get capital gains estimates, tax optimization suggestions, and automated tax reports. Available in Pro plan.
+              Capital gains estimates, tax optimization strategies, and automated tax reports.
             </Text>
-            {!user?.isPremium && (
+            {!isPremium ? (
               <Pressable style={styles.taxUpgradeBtn} onPress={() => handleUpgrade('Pro')}>
                 <Text style={styles.taxUpgradeText}>Unlock Tax Module</Text>
               </Pressable>
-            )}
-            {user?.isPremium && (
+            ) : (
               <View style={styles.taxFeatures}>
                 <View style={styles.taxFeatureRow}>
                   <Feather name="percent" size={14} color={Colors.accent} />
-                  <Text style={styles.taxFeatureText}>Estimated Capital Gains: $0.00</Text>
+                  <Text style={styles.taxFeatureText}>Estimated Capital Gains: Calculated from holdings</Text>
                 </View>
                 <View style={styles.taxFeatureRow}>
                   <Feather name="trending-down" size={14} color={Colors.highlight} />
-                  <Text style={styles.taxFeatureText}>Optimization: Hold assets &gt;1 year for long-term rate</Text>
+                  <Text style={styles.taxFeatureText}>Strategy: Hold assets &gt;1 year for long-term rate</Text>
+                </View>
+                <View style={styles.taxFeatureRow}>
+                  <Feather name="file-text" size={14} color={Colors.blue} />
+                  <Text style={styles.taxFeatureText}>Monthly tax reports auto-generated via Xeni</Text>
                 </View>
               </View>
             )}
           </View>
+        </View>
+
+        {/* Xeni AI */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Xeni AI Advisor</Text>
+          <Pressable style={styles.xeniCard} onPress={() => router.push('/(tabs)/xeni')}>
+            <View style={styles.xeniCardLeft}>
+              <View style={styles.xeniCardAvatar}>
+                <Text style={styles.xeniCardAvatarText}>X</Text>
+              </View>
+              <View>
+                <Text style={styles.xeniCardTitle}>Chat with Xeni</Text>
+                <Text style={styles.xeniCardSub}>Your AI financial intelligence advisor</Text>
+              </View>
+            </View>
+            <Feather name="arrow-right" size={18} color={Colors.accent} />
+          </Pressable>
         </View>
 
         {/* Account */}
@@ -206,15 +292,17 @@ export default function SettingsScreen() {
             <View style={styles.separator} />
             <SettingRow icon="mail" label="Email" value={user?.email} />
             <View style={styles.separator} />
+            <SettingRow icon="award" label="Plan" value={isAdmin ? 'Admin' : isPremium ? 'Pro' : 'Free'} />
+            <View style={styles.separator} />
             <SettingRow icon="shield" label="Security" value="Password protected" />
           </View>
         </View>
 
-        {/* App Info */}
+        {/* About */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           <View style={styles.settingsGroup}>
-            <SettingRow icon="info" label="Version" value="1.0.0" />
+            <SettingRow icon="info" label="Version" value="2.0.0" />
             <View style={styles.separator} />
             <SettingRow icon="lock" label="Privacy Policy" onPress={() => {}} />
           </View>
@@ -255,23 +343,34 @@ const styles = StyleSheet.create({
   profileMeta: { flex: 1 },
   profileName: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
   profileEmail: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textMuted },
-  proBadge: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
+  roleBadge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  roleBadgeText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1 },
+  proBadge: { backgroundColor: Colors.accent, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   proText: { fontFamily: 'Inter_700Bold', fontSize: 11, color: Colors.primary, letterSpacing: 1 },
-  freeBadge: {
-    backgroundColor: Colors.cardBorder,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
+  freeBadge: { backgroundColor: Colors.cardBorder, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   freeText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: Colors.textSecondary, letterSpacing: 1 },
   section: { gap: 12 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text },
+  modeToggleCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: 16,
+    gap: 14,
+  },
+  modeOption: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.backgroundTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text },
+  modeSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textMuted },
   planCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -282,10 +381,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  planCardHighlighted: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
+  planCardHighlighted: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   planBadge: {
     position: 'absolute',
     top: 14,
@@ -326,6 +422,27 @@ const styles = StyleSheet.create({
   taxFeatures: { gap: 10 },
   taxFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   taxFeatureText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary },
+  xeniCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.accent + '11',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.accent + '44',
+    padding: 16,
+  },
+  xeniCardLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  xeniCardAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  xeniCardAvatarText: { fontFamily: 'Inter_700Bold', fontSize: 18, color: Colors.primary },
+  xeniCardTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text },
+  xeniCardSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textMuted },
   settingsGroup: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -333,12 +450,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     overflow: 'hidden',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   rowPressed: { backgroundColor: Colors.backgroundSecondary },
   rowIcon: {
     width: 34,

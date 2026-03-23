@@ -18,6 +18,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useApi } from '@/hooks/useApi';
 import { NetWorthCard } from '@/components/NetWorthCard';
 import { AssetAllocationChart, CATEGORY_COLORS, CATEGORY_LABELS } from '@/components/AssetAllocationChart';
+import { MarketTicker } from '@/components/MarketTicker';
+import { useInsights } from '@/services/insightsService';
 
 interface Asset {
   id: number;
@@ -35,6 +37,15 @@ interface Expense {
   date: string;
 }
 
+const CATEGORY_ICONS: Record<string, string> = {
+  travel: 'map',
+  dining: 'coffee',
+  shopping: 'shopping-bag',
+  bills: 'file-text',
+  investment: 'trending-up',
+  other: 'more-horizontal',
+};
+
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -50,6 +61,8 @@ export default function DashboardScreen() {
     queryFn: () => apiFetch('/expenses'),
   });
 
+  const { data: insights } = useInsights();
+
   const isRefreshing = loadingAssets || loadingExpenses;
 
   const onRefresh = useCallback(async () => {
@@ -63,9 +76,7 @@ export default function DashboardScreen() {
 
   const allocationData = useMemo(() => {
     const map: Record<string, number> = {};
-    assets.forEach((a) => {
-      map[a.type] = (map[a.type] || 0) + a.value;
-    });
+    assets.forEach((a) => { map[a.type] = (map[a.type] || 0) + a.value; });
     return Object.entries(map).map(([label, value]) => ({
       label,
       value,
@@ -88,17 +99,12 @@ export default function DashboardScreen() {
     [expenses]
   );
 
-  const CATEGORY_ICONS: Record<string, string> = {
-    travel: 'map',
-    dining: 'coffee',
-    shopping: 'shopping-bag',
-    bills: 'file-text',
-    investment: 'trending-up',
-    other: 'more-horizontal',
-  };
-
   const webTopPad = Platform.OS === 'web' ? 67 : insets.top;
   const webBottomPad = Platform.OS === 'web' ? 34 : 0;
+
+  const isAdmin = user?.role === 'admin';
+  const isPremium = user?.isPremium || user?.role === 'premium_user' || isAdmin;
+  const healthScore = insights?.financialScore;
 
   return (
     <LinearGradient colors={[Colors.background, Colors.primary + '22', Colors.background]} style={styles.gradient}>
@@ -109,35 +115,36 @@ export default function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.accent}
-          />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.accent} />
         }
       >
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Good morning,</Text>
+            <Text style={styles.greeting}>
+              {isAdmin ? '⚡ Admin Mode •' : user?.businessMode ? '🏢 Business •' : 'Good morning,'}
+            </Text>
             <Text style={styles.userName}>{user?.name?.split(' ')[0] ?? 'Investor'}</Text>
           </View>
-          {user?.isPremium ? (
-            <View style={styles.proBadge}>
-              <Text style={styles.proText}>PRO</Text>
-            </View>
-          ) : (
-            <Pressable style={styles.upgradeBtn} onPress={() => router.push('/(tabs)/settings')}>
-              <Text style={styles.upgradeText}>Upgrade</Text>
-            </Pressable>
-          )}
+          <View style={styles.headerRight}>
+            {isAdmin && (
+              <View style={[styles.badge, { backgroundColor: Colors.purple + '33', borderColor: Colors.purple }]}>
+                <Text style={[styles.badgeText, { color: Colors.purple }]}>ADMIN</Text>
+              </View>
+            )}
+            {isPremium && !isAdmin ? (
+              <View style={styles.proBadge}>
+                <Text style={styles.proText}>PRO</Text>
+              </View>
+            ) : !isPremium && (
+              <Pressable style={styles.upgradeBtn} onPress={() => router.push('/(tabs)/settings')}>
+                <Text style={styles.upgradeText}>Upgrade</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
-        <NetWorthCard
-          netWorth={netWorth}
-          monthlyChange={monthlyChange}
-          changePercent={changePercent}
-        />
+        <NetWorthCard netWorth={netWorth} monthlyChange={monthlyChange} changePercent={changePercent} />
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
@@ -162,10 +169,29 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Allocation */}
-        {assets.length > 0 && (
-          <AssetAllocationChart data={allocationData} />
+        {/* AI Insight of the Day */}
+        {healthScore && (
+          <Pressable style={styles.xeniInsightCard} onPress={() => router.push('/(tabs)/xeni')}>
+            <View style={styles.xeniInsightLeft}>
+              <View style={styles.xeniSmallAvatar}>
+                <Text style={styles.xeniSmallAvatarText}>X</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.xeniInsightLabel}>Xeni AI Insight</Text>
+                <Text style={styles.xeniInsightText} numberOfLines={2}>
+                  {insights?.expenseInsights?.[0] || insights?.investmentInsights?.[0] || `Your financial health score is ${healthScore.score}/100 (${healthScore.summary}). Tap to explore.`}
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={16} color={Colors.accent} />
+          </Pressable>
         )}
+
+        {/* Market Ticker */}
+        <MarketTicker filter="all" />
+
+        {/* Allocation */}
+        {assets.length > 0 && <AssetAllocationChart data={allocationData} />}
 
         {/* Recent Activity */}
         <View style={styles.section}>
@@ -186,19 +212,13 @@ export default function DashboardScreen() {
             recentExpenses.map((e) => (
               <View key={e.id} style={styles.activityRow}>
                 <View style={[styles.activityIcon, { backgroundColor: Colors.backgroundTertiary }]}>
-                  <Feather
-                    name={(CATEGORY_ICONS[e.category] || 'circle') as any}
-                    size={16}
-                    color={Colors.accent}
-                  />
+                  <Feather name={(CATEGORY_ICONS[e.category] || 'circle') as any} size={16} color={Colors.accent} />
                 </View>
                 <View style={styles.activityMeta}>
                   <Text style={styles.activityDesc}>{e.description}</Text>
                   <Text style={styles.activityCat}>{e.category}</Text>
                 </View>
-                <Text style={styles.activityAmount}>
-                  -${e.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </Text>
+                <Text style={styles.activityAmount}>-${e.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
               </View>
             ))
           )}
@@ -211,49 +231,22 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { paddingHorizontal: 20, gap: 20 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  userName: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 22,
-    color: Colors.text,
-  },
-  proBadge: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  greeting: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary },
+  userName: { fontFamily: 'Inter_700Bold', fontSize: 22, color: Colors.text },
+  headerRight: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  badge: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
   },
-  proText: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 11,
-    color: Colors.primary,
-    letterSpacing: 1,
-  },
-  upgradeBtn: {
-    borderWidth: 1,
-    borderColor: Colors.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  upgradeText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: Colors.accent,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  badgeText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1 },
+  proBadge: { backgroundColor: Colors.accent, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  proText: { fontFamily: 'Inter_700Bold', fontSize: 11, color: Colors.primary, letterSpacing: 1 },
+  upgradeBtn: { borderWidth: 1, borderColor: Colors.accent, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  upgradeText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.accent },
+  statsRow: { flexDirection: 'row', gap: 12 },
   statCard: {
     flex: 1,
     backgroundColor: Colors.card,
@@ -264,35 +257,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  statValue: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 16,
-    color: Colors.text,
-  },
-  statLabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  section: {
-    gap: 12,
-  },
-  sectionHeader: {
+  statValue: { fontFamily: 'Inter_700Bold', fontSize: 16, color: Colors.text },
+  statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textMuted, textAlign: 'center' },
+  xeniInsightCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: Colors.accent + '11',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.accent + '44',
+    padding: 14,
+    gap: 10,
   },
-  sectionTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 16,
-    color: Colors.text,
+  xeniInsightLeft: { flex: 1, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  xeniSmallAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  seeAll: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.accent,
-  },
+  xeniSmallAvatarText: { fontFamily: 'Inter_700Bold', fontSize: 14, color: Colors.primary },
+  xeniInsightLabel: { fontFamily: 'Inter_700Bold', fontSize: 11, color: Colors.accent, letterSpacing: 0.5, marginBottom: 2 },
+  xeniInsightText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  section: { gap: 12 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
+  seeAll: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.accent },
   emptyCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -302,18 +295,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  emptyText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 15,
-    color: Colors.text,
-    marginTop: 4,
-  },
-  emptySubtext: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
+  emptyText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text, marginTop: 4 },
+  emptySubtext: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textMuted, textAlign: 'center' },
   activityRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -324,28 +307,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.cardBorder,
     padding: 14,
   },
-  activityIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  activityIcon: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   activityMeta: { flex: 1 },
-  activityDesc: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    color: Colors.text,
-  },
-  activityCat: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    color: Colors.textMuted,
-    textTransform: 'capitalize',
-  },
-  activityAmount: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    color: Colors.error,
-  },
+  activityDesc: { fontFamily: 'Inter_500Medium', fontSize: 14, color: Colors.text },
+  activityCat: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textMuted, textTransform: 'capitalize' },
+  activityAmount: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.error },
 });

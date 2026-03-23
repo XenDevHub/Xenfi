@@ -1,15 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 setBaseUrl(API_BASE);
 
-interface User {
+export interface User {
   id: number;
   name: string;
   email: string;
   isPremium: boolean;
+  role: 'user' | 'premium_user' | 'admin';
+  businessMode: boolean;
   createdAt: string;
 }
 
@@ -20,6 +22,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -32,13 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadStoredAuth();
-  }, []);
-
-  useEffect(() => {
-    setAuthTokenGetter(() => token);
-  }, [token]);
+  useEffect(() => { loadStoredAuth(); }, []);
+  useEffect(() => { setAuthTokenGetter(() => token); }, [token]);
 
   async function loadStoredAuth() {
     try {
@@ -50,10 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
       }
-    } catch {
-    } finally {
-      setIsLoading(false);
-    }
+    } catch {}
+    finally { setIsLoading(false); }
   }
 
   async function login(email: string, password: string) {
@@ -90,9 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ user, token, isLoading, login, register, logout }),
-    [user, token, isLoading]
+    () => ({ user, token, isLoading, login, register, logout, updateUser }),
+    [user, token, isLoading, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

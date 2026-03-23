@@ -1,6 +1,7 @@
 import { boolean, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { userRoleEnum } from "./roles";
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -8,6 +9,8 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   isPremium: boolean("is_premium").notNull().default(false),
+  role: userRoleEnum("role").notNull().default("user"),
+  businessMode: boolean("business_mode").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
