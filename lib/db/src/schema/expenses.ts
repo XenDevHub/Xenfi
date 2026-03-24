@@ -1,22 +1,15 @@
-import { doublePrecision, integer, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-
-export const expenseCategoryEnum = pgEnum("expense_category", [
-  "travel",
-  "dining",
-  "shopping",
-  "bills",
-  "investment",
-  "other",
-]);
 
 export const expensesTable = pgTable("expenses", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
+  txType: text("tx_type").notNull().default("expense"),
   amount: doublePrecision("amount").notNull(),
-  category: expenseCategoryEnum("category").notNull(),
-  description: text("description").notNull(),
+  category: text("category").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  description: text("description").notNull().default(""),
   date: timestamp("date").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

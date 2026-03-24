@@ -7,6 +7,8 @@ import loansRouter from "./loans.js";
 import marketRouter from "./market.js";
 import insightsRouter from "./insights.js";
 import businessRouter from "./business.js";
+import categoriesRouter from "./categories.js";
+import currenciesRouter from "./currencies.js";
 
 const router = Router();
 
@@ -18,5 +20,7 @@ router.use("/loans", loansRouter);
 router.use("/market", marketRouter);
 router.use("/insights", insightsRouter);
 router.use("/business", businessRouter);
+router.use("/categories", categoriesRouter);
+router.use("/currencies", currenciesRouter);
 
 export default router;

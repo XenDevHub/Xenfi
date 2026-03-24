@@ -13,10 +13,10 @@ A premium mobile fintech application for High-Net-Worth Individuals (HNWIs) to m
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
 - **Mobile**: Expo SDK 54 / React Native
 - **Auth**: JWT (jsonwebtoken) + bcryptjs
-- **Charts**: react-native-svg (custom donut chart)
+- **Charts**: react-native-svg (custom SVG donut chart)
+- **State**: TanStack Query (React Query)
 
 ## Design System
 
@@ -33,44 +33,59 @@ A premium mobile fintech application for High-Net-Worth Individuals (HNWIs) to m
 ```text
 artifacts-monorepo/
 ├── artifacts/
-│   ├── api-server/         # Express API server (auth, assets, expenses, loans)
+│   ├── api-server/         # Express API server
 │   └── xenfi/              # Expo React Native mobile app
 ├── lib/
-│   ├── api-spec/           # OpenAPI spec + Orval codegen
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas
 │   └── db/                 # Drizzle ORM schema + DB connection
 └── scripts/                # Utility scripts
 ```
 
-## Features
+## Mobile Screens (6 tabs)
 
-- **Auth**: Email/password registration and login with JWT sessions
-- **Dashboard**: Net worth overview, asset allocation donut chart, recent activity
-- **Portfolio**: Add/edit/delete assets (Stocks, Crypto, Real Estate, Cash) with gain/loss tracking
-- **Expenses**: Track spending with categories (Travel, Dining, Shopping, Bills, Investment)
-- **Loans**: Track given and received loans with status (Pending/Paid) and overdue detection
-- **Tax Module**: Premium-locked feature in Settings
-- **Subscription Plans**: Free ($3 asset limit), Pro $19/month, $99/year, $249 lifetime
+- **Dashboard**: Net worth, HealthScoreCard gauge, Xeni insight card, market ticker
+- **Portfolio**: Assets (Stocks, Crypto, Real Estate, Cash) with gain/loss tracking
+- **Xeni**: AI assistant (chat, insights, monthly report tabs)
+- **Expenses**: Monefy-style radial donut chart with:
+  - 16 expense + 4 income preset categories arranged radially around SVG donut
+  - Period filter: Day / Week / Month / Year / All with date navigation
+  - Balance bar + red minus (expense) / green plus (income) buttons
+  - Add transaction modal with numpad, category selector, date
+  - Sidebar with Categories manager, Currencies manager, Period picker
+  - List view: grouped by category, expandable transactions, delete
+  - Custom categories (name, icon, color, type)
+  - 12 preset + custom currencies, persistent default via AsyncStorage + DB
+- **Loans**: Given/received loans with status and overdue detection
+- **Settings**: Role badges, business mode toggle, admin panel, Xeni card
 
 ## Database Schema
 
-- `users` — id, name, email, password_hash, is_premium, created_at
-- `assets` — id, user_id, type (stocks/crypto/real_estate/cash), name, value, purchase_value
-- `expenses` — id, user_id, amount, category, description, date
+- `users` — id, name, email, password_hash, business_mode, created_at
+- `roles` — id, user_id, role (FREE/PRO/ADMIN)
+- `assets` — id, user_id, type, name, value, purchase_value
+- `expenses` — id, user_id, tx_type (income/expense), amount, category (text), currency, description, date
 - `loans` — id, user_id, name, type (given/received), amount, due_date, status
+- `categories` — id, user_id, name, icon, color, tx_type, is_custom
+- `currencies` — id, user_id, code, symbol, name, is_default
+- `market_cache` — id, symbol, price, change_24h, data, updated_at
+- `ai_insights` — id, user_id, content, type, created_at
+- `businesses` — id, user_id, name, type, created_at
 
 ## API Endpoints
 
 - `POST /api/auth/register` — Register user
 - `POST /api/auth/login` — Login, returns JWT
-- `GET /api/auth/me` — Get current user (auth required)
-- `GET/POST /api/assets` — List/create assets (free plan limited to 3)
+- `GET /api/auth/me` — Get current user
+- `GET/POST /api/assets` — List/create assets
 - `PUT/DELETE /api/assets/:id` — Update/delete asset
-- `GET/POST /api/expenses` — List/create expenses
-- `DELETE /api/expenses/:id` — Delete expense
+- `GET/POST /api/expenses` — List/create transactions (income + expense)
+- `DELETE /api/expenses/:id` — Delete transaction
 - `GET/POST /api/loans` — List/create loans
 - `PUT/DELETE /api/loans/:id` — Update/delete loan
+- `GET /api/market` — Live crypto + mock stocks/gold/forex
+- `GET /api/insights` — AI-generated financial insights
+- `GET/PATCH /api/business/mode` — Business mode toggle
+- `GET/POST/DELETE /api/categories` — Custom categories CRUD
+- `GET/POST/PATCH/DELETE /api/currencies` — Currencies CRUD + set default
 
 ## Development
 
@@ -83,7 +98,4 @@ pnpm --filter @workspace/xenfi run dev
 
 # Push database schema
 pnpm --filter @workspace/db run push-force
-
-# Run codegen after OpenAPI changes
-pnpm --filter @workspace/api-spec run codegen
 ```

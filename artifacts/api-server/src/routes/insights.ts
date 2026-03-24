@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/auth";
+import { authMiddleware, AuthRequest } from "../middlewares/auth.js";
 import {
   analyzeExpenses,
   generateInvestmentGuidance,
@@ -7,36 +7,28 @@ import {
   generatePredictions,
   generateMonthlyReport,
   getUserFinancialContext,
-} from "../services/aiInsights";
+} from "../services/aiInsights.js";
 
 const router = Router();
-router.use(authenticateToken);
+router.use(authMiddleware);
 
-router.get("/", async (req, res) => {
-  const ctx = await getUserFinancialContext(req.user!.userId);
+router.get("/", async (req: AuthRequest, res) => {
+  const ctx = await getUserFinancialContext(req.userId!);
   const score = calculateFinancialScore(ctx);
   const expenseInsights = await analyzeExpenses(ctx);
   const investmentInsights = await generateInvestmentGuidance(ctx);
   const predictions = generatePredictions(ctx);
-
-  res.json({
-    financialScore: score,
-    expenseInsights,
-    investmentInsights,
-    predictions,
-  });
+  res.json({ financialScore: score, expenseInsights, investmentInsights, predictions });
 });
 
-router.get("/score", async (req, res) => {
-  const ctx = await getUserFinancialContext(req.user!.userId);
-  const score = calculateFinancialScore(ctx);
-  res.json(score);
+router.get("/score", async (req: AuthRequest, res) => {
+  const ctx = await getUserFinancialContext(req.userId!);
+  res.json(calculateFinancialScore(ctx));
 });
 
-router.get("/report", async (req, res) => {
-  const ctx = await getUserFinancialContext(req.user!.userId);
-  const report = await generateMonthlyReport(ctx);
-  res.json(report);
+router.get("/report", async (req: AuthRequest, res) => {
+  const ctx = await getUserFinancialContext(req.userId!);
+  res.json(await generateMonthlyReport(ctx));
 });
 
 export default router;
