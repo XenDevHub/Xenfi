@@ -1,0 +1,136 @@
+5. DATABASE UPDATES:
+
+Add new tables:
+
+Market Data Cache:
+- id
+- type (stock/crypto/gold/currency)
+- name
+- price
+- change_percent
+- updated_at
+
+AI Insights:
+- id
+- user_id
+- type (expense/investment/report)
+- content
+- created_at
+
+Reports:
+- id
+- user_id
+- month
+- data_json
+- created_at
+
+Business Accounts:
+- id
+- user_id
+- business_name
+- created_at
+
+Transactions (for business):
+- id
+- business_id
+- type (income/expense)
+- category
+- amount
+- date
+
+--------------------------------------------------
+
+6. UI/UX ADDITIONS:
+
+- Floating AI assistant button (Xeni)
+- Insights cards on dashboard:
+  "AI Insight of the Day"
+- Premium glass-style cards for reports
+- Smooth transitions between sections
+
+--------------------------------------------------
+
+7. LOGIC IMPLEMENTATION:
+
+- Create functions:
+  analyzeExpenses()
+  generateInsights()
+  calculateFinancialScore()
+  generateMonthlyReport()
+
+- Use rule-based AI first (no external AI required)
+- Keep system ready for future OpenAI integration
+
+--------------------------------------------------
+
+8. EXPERIENCE GOAL:
+
+The app should feel like:
+
+- A private banker
+- A financial advisor
+- A smart AI assistant
+
+All in one system.
+
+--------------------------------------------------
+
+FINAL OUTPUT REQUIREMENTS:
+
+Update the existing system to include:
+
+- Market data dashboard section
+- Xeni AI assistant (UI + logic)
+- Monthly report generator
+- Business tracking mode
+- Admin full-access system
+
+Everything must remain:
+
+- Clean
+- Scalable
+- Premium
+- Secure
+
+🔥 WHAT YOU JUST BUILT (STRATEGICALLY)
+
+With this upgrade, XenFi becomes:
+
+👉 Not a tool
+👉 Not a tracker
+
+It becomes:
+
+An AI-powered Wealth Intelligence Platform
+
+This is what investors actually fund.
+
+⚡ PRO TIPS (VERY IMPORTANT)
+
+When you run this:
+
+Step 1:
+
+Generate base app (previous prompt)
+
+Step 2:
+
+Paste this continuation
+
+Step 3:
+
+Iterate with:
+
+“Make Xeni smarter”
+“Improve insights depth”
+“Make UI more premium like private banking app”
+🚀 If you want next level
+
+I can now:
+
+Design Xeni AI logic (advanced level like ChatGPT inside app)
+Create real API integration keys + setup guide
+Build investor demo script (live pitch)
+Turn this into a $100K fundable startup deck
+
+Just tell me 👍
