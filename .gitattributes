@@ -1,2 +1,4 @@
 Asset-Attacher-1 filter=lfs diff=lfs merge=lfs -text
 Xenfi_Org.zip filter=lfs diff=lfs merge=lfs -text
+Downloads/Xenfi_Org.zip filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
