@@ -139,4 +139,63 @@ router.get('/insights/report', async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/insights/full-report', async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const [personalInsights, bizRes] = await Promise.all([
+      computeInsights(userId),
+      pool.query('SELECT id, name, color, icon FROM businesses WHERE user_id = $1', [userId]),
+    ]);
+
+    const businesses = bizRes.rows;
+    const businessReports = await Promise.all(
+      businesses.map(async (biz: any) => {
+        const expRes = await pool.query(
+          `SELECT tx_type, amount::float, category FROM expenses
+           WHERE user_id = $1 AND entity_type = 'business' AND entity_id = $2`,
+          [userId, biz.id]
+        );
+        const income = expRes.rows.filter((e: any) => e.tx_type === 'income').reduce((s: number, e: any) => s + e.amount, 0);
+        const expenses = expRes.rows.filter((e: any) => e.tx_type === 'expense').reduce((s: number, e: any) => s + e.amount, 0);
+        const breakdown: Record<string, number> = {};
+        expRes.rows.filter((e: any) => e.tx_type === 'expense').forEach((e: any) => {
+          breakdown[e.category] = (breakdown[e.category] || 0) + e.amount;
+        });
+        const topCat = Object.entries(breakdown).sort(([, a], [, b]) => b - a)[0];
+        const insights: string[] = [];
+        if (income > 0) insights.push(`Generated $${income.toFixed(2)} in revenue.`);
+        if (expenses > 0) insights.push(`Spent $${expenses.toFixed(2)} in operations.`);
+        if (income > 0 && expenses > 0) {
+          const margin = ((income - expenses) / income * 100).toFixed(1);
+          insights.push(`Profit margin: ${margin}%. ${parseFloat(margin) > 30 ? 'Healthy margin!' : 'Consider reducing costs.'}`);
+        }
+        if (topCat) insights.push(`Largest expense: "${topCat[0]}" at $${topCat[1].toFixed(2)}.`);
+        if (expRes.rows.length === 0) insights.push('No transactions recorded yet.');
+        return {
+          id: biz.id, name: biz.name, color: biz.color, icon: biz.icon,
+          income: Math.round(income), expenses: Math.round(expenses),
+          balance: Math.round(income - expenses), breakdown, insights,
+        };
+      })
+    );
+
+    const allIncome = businessReports.reduce((s, b) => s + b.income, 0);
+    const allExpenses = businessReports.reduce((s, b) => s + b.expenses, 0);
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      personal: personalInsights,
+      businesses: businessReports,
+      consolidated: {
+        totalBusinessIncome: Math.round(allIncome),
+        totalBusinessExpenses: Math.round(allExpenses),
+        totalBusinessBalance: Math.round(allIncome - allExpenses),
+        totalEntities: 1 + businesses.length,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

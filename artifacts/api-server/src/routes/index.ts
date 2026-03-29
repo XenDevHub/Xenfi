@@ -9,6 +9,7 @@ import loansRouter from "./loans.js";
 import insightsRouter from "./insights.js";
 import marketRouter from "./market.js";
 import businessRouter from "./business.js";
+import businessesRouter from "./businesses.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(loansRouter);
 router.use(insightsRouter);
 router.use(marketRouter);
 router.use(businessRouter);
+router.use(businessesRouter);
 
 export default router;

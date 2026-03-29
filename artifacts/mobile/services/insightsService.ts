@@ -50,3 +50,28 @@ export function useMonthlyReport() {
     staleTime: 10 * 60 * 1000,
   });
 }
+
+export interface BusinessReport {
+  id: number; name: string; color: string; icon: string;
+  income: number; expenses: number; balance: number;
+  breakdown: Record<string, number>; insights: string[];
+}
+
+export interface FullReport {
+  generatedAt: string;
+  personal: InsightsData;
+  businesses: BusinessReport[];
+  consolidated: {
+    totalBusinessIncome: number; totalBusinessExpenses: number;
+    totalBusinessBalance: number; totalEntities: number;
+  };
+}
+
+export function useFullReport() {
+  const { apiFetch } = useApi();
+  return useQuery<FullReport>({
+    queryKey: ['insights', 'full-report'],
+    queryFn: () => apiFetch('/insights/full-report'),
+    staleTime: 5 * 60 * 1000,
+  });
+}

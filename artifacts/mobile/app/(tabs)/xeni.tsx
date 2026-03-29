@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/colors';
-import { useInsights, useMonthlyReport } from '@/services/insightsService';
+import { useInsights, useMonthlyReport, useFullReport, type BusinessReport } from '@/services/insightsService';
 import { HealthScoreCard } from '@/components/HealthScoreCard';
 
 interface Message {
@@ -65,7 +65,11 @@ function generateXeniResponse(input: string, insights: ReturnType<typeof useInsi
   }
 
   if (lower.includes('report')) {
-    return "I can generate a full monthly financial report. Head to the Reports section in this screen to view your comprehensive financial summary with all insights and recommendations.";
+    return "I've prepared a comprehensive Full Financial Report — tap the 'Report' tab above to view your Personal finances plus a breakdown of every business entity you're tracking. You'll see revenue, expenses, profit margins, and my recommendations per entity.";
+  }
+
+  if (lower.includes('business') || lower.includes('entity') || lower.includes('company') || lower.includes('profit') || lower.includes('revenue') || lower.includes('margin')) {
+    return "I track each of your business entities separately. Check the 'Report' tab to see revenue, expenses, and profit margins per business. If you haven't added businesses yet, head to the Expenses tab and tap 'Manage Businesses'.";
   }
 
   if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
@@ -90,6 +94,7 @@ export default function XeniScreen() {
   const insets = useSafeAreaInsets();
   const { data: insights, isLoading } = useInsights();
   const { data: report } = useMonthlyReport();
+  const { data: fullReport, isLoading: loadingFull, refetch: refetchFull } = useFullReport();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
@@ -287,43 +292,150 @@ export default function XeniScreen() {
           contentContainerStyle={[styles.insightsScroll, { paddingBottom: webBottomPad + 80 }]}
           showsVerticalScrollIndicator={false}
         >
-          {!report ? (
+          {loadingFull ? (
             <ActivityIndicator color={Colors.accent} size="large" style={{ marginTop: 40 }} />
-          ) : (
+          ) : fullReport ? (
             <>
+              {/* Report Header */}
               <View style={styles.reportHeader}>
-                <Text style={styles.reportTitle}>Monthly Financial Report</Text>
-                <Text style={styles.reportDate}>{new Date(report.generatedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
+                <View>
+                  <Text style={styles.reportTitle}>Full Financial Report</Text>
+                  <Text style={styles.reportDate}>{new Date(fullReport.generatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
+                </View>
+                <Pressable onPress={() => refetchFull()} style={styles.refreshBtn}>
+                  <Feather name="refresh-cw" size={14} color={Colors.accent} />
+                </Pressable>
               </View>
 
-              <View style={styles.reportGrid}>
-                <ReportMetric label="Net Worth" value={`$${report.netWorth.toLocaleString()}`} color={Colors.accent} />
-                <ReportMetric label="Expenses" value={`$${report.totalExpenses.toLocaleString()}`} color={Colors.error} />
-                <ReportMetric label="Portfolio Gain" value={`$${report.totalInvestmentGain.toLocaleString()}`} color={Colors.highlight} />
-                <ReportMetric label="Health Score" value={`${report.financialScore.score}/100`} color={Colors.blue} />
-              </View>
-
-              {Object.keys(report.expenseBreakdown).length > 0 && (
-                <View style={styles.insightSection}>
-                  <Text style={styles.insightSectionTitle}>💳 Expense Breakdown</Text>
-                  {Object.entries(report.expenseBreakdown).sort(([, a], [, b]) => b - a).map(([cat, amt]) => (
-                    <View key={cat} style={styles.breakdownRow}>
-                      <Text style={styles.breakdownCat}>{cat}</Text>
-                      <Text style={styles.breakdownAmt}>${amt.toLocaleString()}</Text>
-                    </View>
-                  ))}
+              {/* Consolidated overview */}
+              {fullReport.consolidated.totalEntities > 1 && (
+                <View style={styles.consolidatedCard}>
+                  <Text style={styles.consolidatedTitle}>📊 Consolidated Overview</Text>
+                  <Text style={styles.consolidatedSub}>{fullReport.consolidated.totalEntities} entities tracked</Text>
+                  <View style={styles.reportGrid}>
+                    <ReportMetric label="Biz Income" value={`$${fullReport.consolidated.totalBusinessIncome.toLocaleString()}`} color={Colors.highlight} />
+                    <ReportMetric label="Biz Expenses" value={`$${fullReport.consolidated.totalBusinessExpenses.toLocaleString()}`} color={Colors.error} />
+                    <ReportMetric label="Biz Balance" value={`$${fullReport.consolidated.totalBusinessBalance.toLocaleString()}`} color={fullReport.consolidated.totalBusinessBalance >= 0 ? Colors.highlight : Colors.error} />
+                    <ReportMetric label="Health Score" value={`${fullReport.personal.financialScore.score}/100`} color={Colors.accent} />
+                  </View>
                 </View>
               )}
 
-              {report.recommendations.length > 0 && (
+              {/* Personal section */}
+              <View style={[styles.entitySection, { borderColor: Colors.accent + '44' }]}>
+                <View style={[styles.entitySectionHeader, { backgroundColor: Colors.accent + '15' }]}>
+                  <View style={[styles.entitySectionIco, { backgroundColor: Colors.accent + '33' }]}>
+                    <Feather name="user" size={14} color={Colors.accent} />
+                  </View>
+                  <Text style={[styles.entitySectionName, { color: Colors.accent }]}>Personal</Text>
+                  <Text style={styles.entitySectionBadge}>{fullReport.personal.financialScore.summary}</Text>
+                </View>
+
+                <View style={styles.entityMetrics}>
+                  <View style={styles.entityMetric}>
+                    <Text style={[styles.entityMetricVal, { color: Colors.highlight }]}>
+                      ${(fullReport.personal.predictions.projected6mSavings).toLocaleString()}
+                    </Text>
+                    <Text style={styles.entityMetricLbl}>6m Savings</Text>
+                  </View>
+                  <View style={styles.entityMetric}>
+                    <Text style={[styles.entityMetricVal, { color: Colors.error }]}>
+                      ${(fullReport.personal.predictions.monthlyBurnRate).toLocaleString()}
+                    </Text>
+                    <Text style={styles.entityMetricLbl}>Monthly Burn</Text>
+                  </View>
+                  <View style={styles.entityMetric}>
+                    <Text style={[styles.entityMetricVal, { color: Colors.accent }]}>
+                      {fullReport.personal.financialScore.score}/100
+                    </Text>
+                    <Text style={styles.entityMetricLbl}>Health</Text>
+                  </View>
+                </View>
+
+                {fullReport.personal.expenseInsights.slice(0, 2).map((ins, i) => (
+                  <InsightCard key={i} text={ins} color={Colors.textSecondary} icon="info" />
+                ))}
+              </View>
+
+              {/* Business sections */}
+              {fullReport.businesses.map((biz) => (
+                <View key={biz.id} style={[styles.entitySection, { borderColor: biz.color + '44' }]}>
+                  <View style={[styles.entitySectionHeader, { backgroundColor: biz.color + '15' }]}>
+                    <View style={[styles.entitySectionIco, { backgroundColor: biz.color + '33' }]}>
+                      <Feather name={(biz.icon || 'briefcase') as any} size={14} color={biz.color} />
+                    </View>
+                    <Text style={[styles.entitySectionName, { color: biz.color }]}>{biz.name}</Text>
+                    <Text style={[styles.entitySectionBadge, { color: biz.balance >= 0 ? Colors.highlight : Colors.error }]}>
+                      {biz.balance >= 0 ? 'Profitable' : 'Loss'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.entityMetrics}>
+                    <View style={styles.entityMetric}>
+                      <Text style={[styles.entityMetricVal, { color: Colors.highlight }]}>${biz.income.toLocaleString()}</Text>
+                      <Text style={styles.entityMetricLbl}>Revenue</Text>
+                    </View>
+                    <View style={styles.entityMetric}>
+                      <Text style={[styles.entityMetricVal, { color: Colors.error }]}>${biz.expenses.toLocaleString()}</Text>
+                      <Text style={styles.entityMetricLbl}>Expenses</Text>
+                    </View>
+                    <View style={styles.entityMetric}>
+                      <Text style={[styles.entityMetricVal, { color: biz.balance >= 0 ? Colors.highlight : Colors.error }]}>
+                        ${Math.abs(biz.balance).toLocaleString()}
+                      </Text>
+                      <Text style={styles.entityMetricLbl}>Balance</Text>
+                    </View>
+                  </View>
+
+                  {Object.keys(biz.breakdown).length > 0 && (
+                    <View style={{ gap: 4, marginBottom: 8 }}>
+                      {Object.entries(biz.breakdown).sort(([,a],[,b])=>b-a).slice(0,3).map(([cat, amt]) => (
+                        <View key={cat} style={styles.breakdownRow}>
+                          <View style={[styles.breakdownDot, { backgroundColor: biz.color + '66' }]} />
+                          <Text style={styles.breakdownCat}>{cat}</Text>
+                          <View style={styles.breakdownBarWrap}>
+                            <View style={[styles.breakdownBarFill, {
+                              width: `${biz.expenses > 0 ? Math.min((amt / biz.expenses) * 100, 100) : 0}%` as any,
+                              backgroundColor: biz.color,
+                            }]} />
+                          </View>
+                          <Text style={styles.breakdownAmt}>${amt.toLocaleString()}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {biz.insights.slice(0, 2).map((ins, i) => (
+                    <InsightCard key={i} text={ins} color={biz.color} icon="zap" />
+                  ))}
+                </View>
+              ))}
+
+              {fullReport.businesses.length === 0 && (
+                <View style={styles.emptyInsight}>
+                  <Feather name="briefcase" size={24} color={Colors.textMuted} style={{ marginBottom: 8 }} />
+                  <Text style={styles.emptyInsightText}>No businesses tracked yet</Text>
+                  <Text style={[styles.emptyInsightText, { fontSize: 12, marginTop: 4 }]}>Add businesses in the Expenses tab to see full reports</Text>
+                </View>
+              )}
+
+              {/* Recommendations */}
+              {fullReport.personal.expenseInsights.length + fullReport.personal.investmentInsights.length > 0 && (
                 <View style={styles.insightSection}>
-                  <Text style={styles.insightSectionTitle}>💡 Key Recommendations</Text>
-                  {report.recommendations.map((rec, i) => (
+                  <Text style={styles.insightSectionTitle}>💡 Xeni Recommendations</Text>
+                  {[...fullReport.personal.expenseInsights, ...fullReport.personal.investmentInsights].slice(0, 4).map((rec, i) => (
                     <InsightCard key={i} text={rec} color={Colors.accent} icon="star" />
                   ))}
                 </View>
               )}
             </>
+          ) : (
+            <View style={styles.emptyInsight}>
+              <Text style={styles.emptyInsightText}>Unable to load report. Please try again.</Text>
+              <Pressable onPress={() => refetchFull()} style={{ marginTop: 12 }}>
+                <Text style={{ color: Colors.accent, fontFamily: 'Inter_600SemiBold' }}>Retry</Text>
+              </Pressable>
+            </View>
           )}
         </ScrollView>
       )}
@@ -585,7 +697,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.text,
   },
-  reportHeader: { gap: 4 },
+  reportHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 },
+  refreshBtn: { padding: 8, backgroundColor: Colors.accent + '22', borderRadius: 10, borderWidth: 1, borderColor: Colors.accent + '55' },
   reportTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 20,
@@ -623,22 +736,101 @@ const styles = StyleSheet.create({
   },
   breakdownRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    padding: 12,
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
   },
+  breakdownDot: { width: 8, height: 8, borderRadius: 4 },
   breakdownCat: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: Colors.text,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: Colors.textSecondary,
     textTransform: 'capitalize',
+    width: 90,
   },
+  breakdownBarWrap: { flex: 1, height: 5, backgroundColor: Colors.cardBorder, borderRadius: 3, overflow: 'hidden' },
+  breakdownBarFill: { height: 5, borderRadius: 3 },
   breakdownAmt: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: Colors.error,
+    fontSize: 12,
+    color: Colors.text,
+    width: 64,
+    textAlign: 'right',
+  },
+  consolidatedCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    padding: 16,
+    gap: 8,
+    marginBottom: 4,
+  },
+  consolidatedTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: Colors.text,
+  },
+  consolidatedSub: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  entitySection: {
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 8,
+    marginBottom: 4,
+  },
+  entitySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    padding: 10,
+  },
+  entitySectionIco: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  entitySectionName: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    flex: 1,
+  },
+  entitySectionBadge: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: Colors.textMuted,
+  },
+  entityMetrics: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  entityMetric: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    gap: 2,
+  },
+  entityMetricVal: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: Colors.text,
+  },
+  entityMetricLbl: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 10,
+    color: Colors.textMuted,
   },
 });
