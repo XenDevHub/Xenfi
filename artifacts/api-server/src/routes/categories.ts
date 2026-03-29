@@ -7,10 +7,22 @@ router.use(requireAuth);
 
 router.get('/categories', async (req: AuthRequest, res) => {
   try {
-    const result = await pool.query(
-      'SELECT id, name, icon, color, tx_type as "txType" FROM categories WHERE user_id = $1 ORDER BY created_at ASC',
-      [req.user!.id]
-    );
+    const { entityType, entityId } = req.query;
+    let query = `SELECT id, name, icon, color, tx_type as "txType", entity_type as "entityType", entity_id as "entityId"
+      FROM categories WHERE user_id = $1`;
+    const params: any[] = [req.user!.id];
+
+    if (entityType) {
+      params.push(entityType);
+      query += ` AND entity_type = $${params.length}`;
+    }
+    if (entityId) {
+      params.push(parseInt(entityId as string));
+      query += ` AND entity_id = $${params.length}`;
+    }
+    query += ' ORDER BY created_at ASC';
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -19,11 +31,13 @@ router.get('/categories', async (req: AuthRequest, res) => {
 
 router.post('/categories', async (req: AuthRequest, res) => {
   try {
-    const { name, icon = 'tag', color = '#D4AF37', txType = 'expense' } = req.body;
+    const { name, icon = 'tag', color = '#D4AF37', txType = 'expense', entityType = 'personal', entityId = null } = req.body;
     if (!name) { res.status(400).json({ error: 'name required' }); return; }
     const result = await pool.query(
-      'INSERT INTO categories (user_id, name, icon, color, tx_type) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, icon, color, tx_type as "txType"',
-      [req.user!.id, name, icon, color, txType]
+      `INSERT INTO categories (user_id, name, icon, color, tx_type, entity_type, entity_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, icon, color, tx_type as "txType", entity_type as "entityType", entity_id as "entityId"`,
+      [req.user!.id, name, icon, color, txType, entityType, entityId]
     );
     res.json(result.rows[0]);
   } catch (err: any) {
