@@ -44,6 +44,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
         <Label>Expenses</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="loans">
+        <Icon sf={{ default: "square.stack.3d.up", selected: "square.stack.3d.up.fill" }} />
+        <Label>Loans</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
         <Label>Settings</Label>
@@ -118,7 +122,11 @@ function ClassicTabLayout() {
         options={{
           title: "Loans",
           tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="arrow.left.arrow.right" tintColor={color} size={22} /> : <Feather name="repeat" size={21} color={color} />,
+            isIOS ? (
+              <SymbolView name="square.stack.3d.up.fill" tintColor={color} size={22} />
+            ) : (
+              <Feather name="layers" size={21} color={color} />
+            ),
         }}
       />
       <Tabs.Screen
