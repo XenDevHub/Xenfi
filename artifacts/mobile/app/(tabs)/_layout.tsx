@@ -3,7 +3,7 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs, router } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import React, { useEffect } from "react";
 import { Platform, StyleSheet, View, Text } from "react-native";
 import Colors from "@/constants/colors";
@@ -45,12 +45,8 @@ function NativeTabLayout() {
         <Label>Expenses</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="loans">
-        <Icon sf={{ default: "square.stack.3d.up", selected: "square.stack.3d.up.fill" }} />
+        <Icon sf={{ default: "doc.text", selected: "doc.text.fill" }} />
         <Label>Loans</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
-        <Label>Settings</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -123,18 +119,10 @@ function ClassicTabLayout() {
           title: "Loans",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="square.stack.3d.up.fill" tintColor={color} size={22} />
+              <SymbolView name="doc.text.fill" tintColor={color} size={22} />
             ) : (
-              <Feather name="layers" size={21} color={color} />
+              <Ionicons name="receipt" size={22} color={color} />
             ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="gearshape.fill" tintColor={color} size={22} /> : <Feather name="settings" size={21} color={color} />,
         }}
       />
     </Tabs>

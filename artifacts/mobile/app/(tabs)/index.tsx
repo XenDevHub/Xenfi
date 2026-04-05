@@ -119,11 +119,13 @@ export default function DashboardScreen() {
         }
       >
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerLeft}>
             <Text style={styles.greeting}>
               {isAdmin ? '⚡ Admin Mode •' : user?.businessMode ? '🏢 Business •' : 'Good morning,'}
             </Text>
-            <Text style={styles.userName}>{user?.name?.split(' ')[0] ?? 'Investor'}</Text>
+            <Text style={styles.userName} numberOfLines={1}>
+              {user?.name?.split(' ')[0] ?? 'Investor'}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             {isAdmin && (
@@ -131,12 +133,21 @@ export default function DashboardScreen() {
                 <Text style={[styles.badgeText, { color: Colors.purple }]}>ADMIN</Text>
               </View>
             )}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              onPress={() => router.push('/settings')}
+              style={({ pressed }) => [styles.headerSettingsBtn, pressed && { opacity: 0.75 }]}
+              hitSlop={10}
+            >
+              <Feather name="settings" size={22} color="#FFD700" />
+            </Pressable>
             {isPremium && !isAdmin ? (
               <View style={styles.proBadge}>
                 <Text style={styles.proText}>PRO</Text>
               </View>
             ) : !isPremium && (
-              <Pressable style={styles.upgradeBtn} onPress={() => router.push('/(tabs)/settings')}>
+              <Pressable style={styles.upgradeBtn} onPress={() => router.push('/settings')}>
                 <Text style={styles.upgradeText}>Upgrade</Text>
               </Pressable>
             )}
@@ -225,10 +236,12 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { paddingHorizontal: 20, gap: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  headerLeft: { flex: 1, minWidth: 0, marginRight: 4 },
   greeting: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary },
   userName: { fontFamily: 'Inter_700Bold', fontSize: 22, color: Colors.text },
-  headerRight: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  headerRight: { flexDirection: 'row', gap: 6, alignItems: 'center', flexShrink: 0 },
+  headerSettingsBtn: { paddingVertical: 4, paddingHorizontal: 4, borderRadius: 10 },
   badge: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   badgeText: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 1 },
   proBadge: { backgroundColor: Colors.accent, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },

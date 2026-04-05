@@ -117,7 +117,21 @@ export default function SettingsScreen() {
         contentContainerStyle={[styles.container, { paddingTop: webTopPad + 16, paddingBottom: webBottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Settings</Text>
+        <View style={styles.settingsHeader}>
+          <Pressable
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace('/(tabs)');
+            }}
+            style={({ pressed }) => [styles.settingsBackBtn, pressed && { opacity: 0.7 }]}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Feather name="chevron-left" size={26} color={Colors.text} />
+          </Pressable>
+          <Text style={styles.title}>Settings</Text>
+        </View>
 
         {/* Profile card */}
         <View style={styles.profileCard}>
@@ -320,7 +334,9 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { paddingHorizontal: 20, gap: 20 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 26, color: Colors.text },
+  settingsHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  settingsBackBtn: { padding: 4, marginLeft: -4 },
+  title: { fontFamily: 'Inter_700Bold', fontSize: 26, color: Colors.text, flex: 1 },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
