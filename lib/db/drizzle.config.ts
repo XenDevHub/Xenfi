@@ -1,14 +1,20 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
+import * as dotenv from "dotenv";
+
+// This line tells Drizzle to look at your .env file for the DATABASE_URL
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+  console.warn("⚠️ DATABASE_URL not found in .env, falling back to local default.");
 }
 
 export default defineConfig({
-  schema: path.join(__dirname, "./src/schema/index.ts"),
+  // Points to your actual schema file
+  schema: "./src/schema/index.ts", 
+  out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: process.env.DATABASE_URL || "postgresql://postgres@localhost:5432/xenfi",
   },
 });

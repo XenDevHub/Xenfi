@@ -2,11 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useMemo, ReactNo
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setBaseUrl, setAuthTokenGetter } from '@workspace/api-client-react';
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+// Unified IP address to match your current network: 192.168.235.31
+const API_BASE = "http://192.168.0.176:3000";
 setBaseUrl(API_BASE);
 
 export interface User {
-  id: number;
+  id: string; // Changed to string to match Postgres UUID
   name: string;
   email: string;
   isPremium: boolean;
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function login(email: string, password: string) {
+    console.log(`[Auth] Attempting login at: ${API_BASE}/api/auth/login`);
     const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -67,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function register(name: string, email: string, password: string) {
+    console.log(`[Auth] Attempting registration at: ${API_BASE}/api/auth/register`);
     const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

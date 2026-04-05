@@ -134,35 +134,53 @@ const PRESET_CURRENCIES = [
 // ─────────────────────────────────────────
 const CHART_R = Math.min(SW * 0.24, 90);
 const STROKE = 22;
-function DonutChart({ income, expense, data, symbol }: { income:number; expense:number; data:{value:number;color:string}[]; symbol:string }) {
-  const total = data.reduce((s,d)=>s+d.value,0);
-  const sz = CHART_R*2+STROKE;
-  const cx = sz/2;
-  const circ = 2*Math.PI*CHART_R;
+function DonutChart({ income, expense, data, symbol }: { income: number; expense: number; data: { value: number; color: string }[]; symbol: string }) {
+  const total = data.reduce((s, d) => s + (d.value || 0), 0);
+  const CHART_R = Math.min(SW * 0.24, 90);
+  const STROKE = 22;
+  const sz = CHART_R * 2 + STROKE;
+  const cx = sz / 2;
+  const circ = 2 * Math.PI * CHART_R;
+  
   let off = 0;
-  const segs = data.map((d)=>{
-    const dash = total>0?(d.value/total)*circ:0;
-    const seg = {dash,offset:circ-off,color:d.color};
-    off+=dash; return seg;
+  const segs = data.map((d) => {
+    const val = d.value || 0;
+    const dash = (total > 0 && !isNaN(total)) ? (val / total) * circ : 0;
+    const seg = { dash, offset: circ - off, color: d.color };
+    off += dash;
+    return seg;
   });
+
   return (
-    <View style={{alignItems:'center',justifyContent:'center'}}>
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={sz} height={sz}>
-        <Circle cx={cx} cy={cx} r={CHART_R} fill="none" stroke={Colors.backgroundTertiary} strokeWidth={STROKE}/>
-        {total===0?<Circle cx={cx} cy={cx} r={CHART_R} fill="none" stroke="#1A3050" strokeWidth={STROKE}
-          strokeDasharray={`${circ*0.97} ${circ*0.03}`} strokeDashoffset={circ*0.25} strokeLinecap="round"/>
-        :segs.map((s,i)=>s.dash>1?<Circle key={i} cx={cx} cy={cx} r={CHART_R} fill="none"
-          stroke={s.color} strokeWidth={STROKE} strokeDasharray={`${s.dash-2} ${circ-s.dash+2}`}
-          strokeDashoffset={s.offset} strokeLinecap="round" rotation="-90" origin={`${cx},${cx}`}/>:null)}
+        <Circle cx={cx} cy={cx} r={CHART_R} fill="none" stroke={Colors.backgroundTertiary} strokeWidth={STROKE} />
+        {(total === 0 || isNaN(total)) ? (
+          <Circle cx={cx} cy={cx} r={CHART_R} fill="none" stroke="#1A3050" strokeWidth={STROKE} opacity={0.3} />
+        ) : (
+          segs.map((s, i) => s.dash > 0 ? (
+            <Circle
+              key={i}
+              cx={cx} cy={cx} r={CHART_R}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={STROKE}
+              strokeDasharray={`${Math.max(0, s.dash - 2)} ${circ - (Math.max(0, s.dash - 2))}`}
+              strokeDashoffset={s.offset}
+              strokeLinecap="round"
+              rotation="-90"
+              origin={`${cx},${cx}`}
+            />
+          ) : null)
+        )}
       </Svg>
-      <View style={[StyleSheet.absoluteFill,{alignItems:'center',justifyContent:'center'}]}>
-        <Text style={s.chartInc}>+{symbol}{income.toLocaleString('en-US',{maximumFractionDigits:0})}</Text>
-        <Text style={s.chartExp}>-{symbol}{expense.toLocaleString('en-US',{maximumFractionDigits:0})}</Text>
+      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ color: '#50C878', fontWeight: 'bold' }}>+{symbol}{income.toLocaleString()}</Text>
+        <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>-{symbol}{expense.toLocaleString()}</Text>
       </View>
     </View>
   );
 }
-
 // ─────────────────────────────────────────
 // STAT CARD
 // ─────────────────────────────────────────
@@ -437,10 +455,22 @@ export default function ExpensesScreen() {
     addBizMut.mutate({name:bizName.trim(),type:bizType,color:bizColor,icon:bt?.icon||'briefcase',description:bizDesc});
   }
 
-  function addFromLibrary(item:{name:string;icon:string;color:string;txType:string}){
-    const payload:any={name:item.name,icon:item.icon,color:item.color,txType:item.txType};
-    if(selectedEntity.type==='business'){payload.entityType='business';payload.entityId=selectedEntity.id;}
-    else{payload.entityType='personal';}
+  function addFromLibrary(item: { name: string; icon: string; color: string; txType: string }) {
+    // FIX: Change 'txType' to 'type' so it matches your Database Column
+    const payload: any = { 
+      name: item.name, 
+      icon: item.icon, 
+      color: item.color, 
+      type: item.txType 
+    };
+  
+    if (selectedEntity.type === 'business') {
+      payload.entityType = 'business';
+      payload.entityId = selectedEntity.id;
+    } else {
+      payload.entityType = 'personal';
+    }
+  
     addCatMut.mutate(payload);
   }
 
